@@ -27,33 +27,43 @@ type HelloWorldComponent interface {
 
 const Mongo = "mongodb"
 const Redis = "redis"
+const Mysql = "mysql"
 
 var (
 	mongoHelloWorld *mongoComponent
 	redisHelloWorld *redisComponent
+	mysqlHelloWorld *mysqlComponent
 )
 
-//GetComponent 通过传入的component的名称返回实现了HelloWorldComponent接口的component
+// GetComponent 通过传入的component的名称返回实现了HelloWorldComponent接口的component。
 func GetComponent(component string) (HelloWorldComponent, error) {
 	switch component {
 	case Mongo:
 		return mongoHelloWorld, nil
 	case Redis:
 		return redisHelloWorld, nil
+	case Mysql:
+		return mysqlHelloWorld, nil
 	default:
 		return nil, fmt.Errorf("invalid component")
 	}
 }
 
+// InitComponents 初始化项目依赖的组件。
 func InitComponents() {
 	mongoHelloWorld = NewMongoComponent()
 	redisHelloWorld = NewRedisComponent()
+	mysqlHelloWorld = NewMysqlComponent()
 	ctx := context.TODO()
 	err := mongoHelloWorld.SetName(ctx, "name", "mongodb")
 	if err != nil {
 		panic(err)
 	}
 	err = redisHelloWorld.SetName(ctx, "name", "redis")
+	if err != nil {
+		panic(err)
+	}
+	err = mysqlHelloWorld.SetName(ctx, "name", "mysql")
 	if err != nil {
 		panic(err)
 	}
