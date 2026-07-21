@@ -36,64 +36,38 @@ var (
 	mysqlDataBase = "demo"
 )
 
-const mysqlTableName = "demo"
-
 type mysqlComponent struct {
 	db *sql.DB
 }
 
-// GetName 从MySQL中获取名称。
-func (m *mysqlComponent) GetName(ctx context.Context, key string) (name string, err error) {
-	err = m.db.QueryRowContext(ctx, fmt.Sprintf("SELECT value FROM %s WHERE `key` = ?", mysqlTableName), key).Scan(&name)
-	if err != nil {
-		return "", err
-	}
-	return name, nil
-}
-
-// SetName 将名称写入MySQL。
-func (m *mysqlComponent) SetName(ctx context.Context, key string, name string) error {
-	_, err := m.db.ExecContext(
-		ctx,
-		fmt.Sprintf("INSERT INTO %s (`key`, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)", mysqlTableName),
-		key,
-		name,
-	)
-	return err
-}
-
-// NewMysqlComponent 初始化一个实现了HelloWorldComponent接口的MysqlComponent。
-func NewMysqlComponent() *mysqlComponent {
+// NewMysqlComponent 初始化登录链路使用的 MySQL 组件。
+func NewMysqlComponent() (*mysqlComponent, error) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", mysqlUserName, mysqlPassword, mysqlAddr, mysqlDataBase)
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
-		fmt.Printf("mysqlClient init error. err %s\n", err)
-		panic("mysql open error")
+		return nil, fmt.Errorf("open mysql: %w", err)
 	}
 	db.SetConnMaxLifetime(3 * time.Minute)
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(10)
 
-	if err := db.PingContext(context.TODO()); err != nil {
-		fmt.Printf("mysqlClient init error. err %s\n", err)
-		panic(fmt.Sprintf("mysql init failed. err %s\n", err))
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := db.PingContext(ctx); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("ping mysql: %w", err)
 	}
 
-	component := &mysqlComponent{db: db}
-	if err := component.initTable(context.TODO()); err != nil {
-		fmt.Printf("mysqlClient init table error. err %s\n", err)
-		panic("mysql init table error")
-	}
-	return component
+	return &mysqlComponent{db: db}, nil
 }
 
-// initTable 初始化MySQL示例表。
-func (m *mysqlComponent) initTable(ctx context.Context) error {
-	_, err := m.db.ExecContext(ctx, fmt.Sprintf(
-		"CREATE TABLE IF NOT EXISTS %s (`key` VARCHAR(128) NOT NULL PRIMARY KEY, value VARCHAR(255) NOT NULL)",
-		mysqlTableName,
-	))
-	return err
+// CheckMysqlHealth 测试登录链路依赖的 MySQL 连接是否可用。
+func CheckMysqlHealth(ctx context.Context) error {
+	mysqlComponent, err := getMysqlDB()
+	if err != nil {
+		return err
+	}
+	return mysqlComponent.db.PingContext(ctx)
 }
 
 // init 项目启动时，会从环境变量中获取mysql的地址、用户名、密码和数据库名。

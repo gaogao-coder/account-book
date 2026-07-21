@@ -16,55 +16,31 @@ limitations under the License.
 package component
 
 import (
-	"context"
-	"fmt"
+	"sync"
 )
-
-type HelloWorldComponent interface {
-	GetName(ctx context.Context, key string) (name string, err error)
-	SetName(ctx context.Context, key string, name string) error
-}
-
-const Mongo = "mongodb"
-const Redis = "redis"
-const Mysql = "mysql"
 
 var (
-	mongoHelloWorld *mongoComponent
-	redisHelloWorld *redisComponent
 	mysqlHelloWorld *mysqlComponent
+
+	componentMu sync.Mutex
 )
 
-// GetComponent 通过传入的component的名称返回实现了HelloWorldComponent接口的component。
-func GetComponent(component string) (HelloWorldComponent, error) {
-	switch component {
-	case Mongo:
-		return mongoHelloWorld, nil
-	case Redis:
-		return redisHelloWorld, nil
-	case Mysql:
+// getMysqlComponent 返回登录链路依赖的 MySQL 组件单例。
+func getMysqlComponent() (*mysqlComponent, error) {
+	componentMu.Lock()
+	defer componentMu.Unlock()
+	if mysqlHelloWorld != nil {
 		return mysqlHelloWorld, nil
-	default:
-		return nil, fmt.Errorf("invalid component")
 	}
+	component, err := NewMysqlComponent()
+	if err != nil {
+		return nil, err
+	}
+	mysqlHelloWorld = component
+	return mysqlHelloWorld, nil
 }
 
-// InitComponents 初始化项目依赖的组件。
-func InitComponents() {
-	mongoHelloWorld = NewMongoComponent()
-	redisHelloWorld = NewRedisComponent()
-	mysqlHelloWorld = NewMysqlComponent()
-	ctx := context.TODO()
-	err := mongoHelloWorld.SetName(ctx, "name", "mongodb")
-	if err != nil {
-		panic(err)
-	}
-	err = redisHelloWorld.SetName(ctx, "name", "redis")
-	if err != nil {
-		panic(err)
-	}
-	err = mysqlHelloWorld.SetName(ctx, "name", "mysql")
-	if err != nil {
-		panic(err)
-	}
+// getMysqlDB 返回底层 MySQL 连接池。
+func getMysqlDB() (*mysqlComponent, error) {
+	return getMysqlComponent()
 }

@@ -1,0 +1,54 @@
+.pai/skill-update/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE and editor files
+.idea/
+.vscode/
+.fleet/
+*.swp
+*.swo
+
+# Local environment and config
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.local.yaml
+*.local.yml
+*.local.json
+config.local.*
+
+# Logs and runtime temp files
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+
+# Go build and test artifacts
+main
+douyincloud-gin-demo
+*.exe
+*.test
+*.out
+coverage.out
+dist/
+build/
+vendor/
+
+# Database and cache files
+*.db
+*.sqlite
+*.sqlite3
+.cache/
+
+# Sensitive local secrets
+secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*

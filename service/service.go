@@ -16,61 +16,69 @@ limitations under the License.
 package service
 
 import (
+	"context"
 	"douyincloud-gin-demo/component"
-	"fmt"
+	"errors"
+	"log"
+	"net/http"
+	"time"
+
 	"github.com/gin-gonic/gin"
 )
 
-func Hello(ctx *gin.Context) {
-	target := ctx.Query("target")
-	if target == "" {
-		Failure(ctx, fmt.Errorf("param invalid"))
-		return
-	}
-	fmt.Printf("target= %s\n", target)
-	hello, err := component.GetComponent(target)
-	if err != nil {
-		Failure(ctx, fmt.Errorf("param invalid"))
-		return
-	}
+const mysqlHealthTimeout = 5 * time.Second
 
-	name, err := hello.GetName(ctx, "name")
-	if err != nil {
-		Failure(ctx, err)
-		return
-	}
-	Success(ctx, name)
+type mysqlHealthResp struct {
+	Healthy        bool  `json:"healthy"`
+	ResponseTimeMS int64 `json:"response_time_ms"`
 }
 
-func SetName(ctx *gin.Context) {
-	var req SetNameReq
-	err := ctx.Bind(&req)
+// Hello 检查登录链路依赖的 MySQL 连接状态。
+func Hello(ctx *gin.Context) {
+	start := time.Now()
+	healthCtx, cancel := context.WithTimeout(ctx.Request.Context(), mysqlHealthTimeout)
+	defer cancel()
+	err := component.CheckMysqlHealth(healthCtx)
+	responseTimeMS := time.Since(start).Milliseconds()
 	if err != nil {
-		Failure(ctx, err)
+		log.Printf("mysql health check failed: %v", err)
+		ctx.JSON(http.StatusServiceUnavailable, &Resp{
+			ErrNo:  -1,
+			ErrMsg: "mysql connection unavailable",
+			Data: mysqlHealthResp{
+				Healthy:        false,
+				ResponseTimeMS: responseTimeMS,
+			},
+		})
 		return
 	}
-	hello, err := component.GetComponent(req.Target)
-	if err != nil {
-		Failure(ctx, fmt.Errorf("param invalid"))
-		return
-	}
-	err = hello.SetName(ctx, "name", req.Name)
-	if err != nil {
-		Failure(ctx, err)
-		return
-	}
-	Success(ctx, "")
+	Success(ctx, mysqlHealthResp{
+		Healthy:        true,
+		ResponseTimeMS: responseTimeMS,
+	})
 }
 
 func Failure(ctx *gin.Context, err error) {
+	status := http.StatusInternalServerError
+	errMsg := "internal server error"
+	internalErr := err
+	var apiErr *apiError
+	if errors.As(err, &apiErr) {
+		status = apiErr.StatusCode
+		errMsg = apiErr.Message
+		internalErr = apiErr.Internal
+	}
+	if internalErr != nil && status >= http.StatusInternalServerError {
+		log.Printf("request failed: %v", internalErr)
+	}
 	resp := &Resp{
 		ErrNo:  -1,
-		ErrMsg: err.Error(),
+		ErrMsg: errMsg,
 	}
-	ctx.JSON(200, resp)
+	ctx.JSON(status, resp)
 }
 
-func Success(ctx *gin.Context, data string) {
+func Success(ctx *gin.Context, data interface{}) {
 	resp := &Resp{
 		ErrNo:  0,
 		ErrMsg: "success",
@@ -79,19 +87,55 @@ func Success(ctx *gin.Context, data string) {
 	ctx.JSON(200, resp)
 }
 
-type HelloResp struct {
-	ErrNo  int    `json:"err_no"`
-	ErrMsg string `json:"err_msg"`
-	Data   string `json:"data"`
-}
-
-type SetNameReq struct {
-	Target string `json:"target"`
-	Name   string `json:"name"`
-}
-
 type Resp struct {
 	ErrNo  int         `json:"err_no"`
 	ErrMsg string      `json:"err_msg"`
 	Data   interface{} `json:"data"`
+}
+
+type apiError struct {
+	StatusCode int
+	Message    string
+	Internal   error
+}
+
+func (e *apiError) Error() string {
+	if e == nil {
+		return ""
+	}
+	if e.Internal != nil {
+		return e.Internal.Error()
+	}
+	return e.Message
+}
+
+func badRequest(message string) error {
+	return &apiError{
+		StatusCode: http.StatusBadRequest,
+		Message:    message,
+	}
+}
+
+func dependencyUnavailable(message string, err error) error {
+	return &apiError{
+		StatusCode: http.StatusServiceUnavailable,
+		Message:    message,
+		Internal:   err,
+	}
+}
+
+func upstreamFailure(message string, err error) error {
+	return &apiError{
+		StatusCode: http.StatusBadGateway,
+		Message:    message,
+		Internal:   err,
+	}
+}
+
+func internalFailure(message string, err error) error {
+	return &apiError{
+		StatusCode: http.StatusInternalServerError,
+		Message:    message,
+		Internal:   err,
+	}
 }

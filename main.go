@@ -16,17 +16,16 @@ limitations under the License.
 package main
 
 import (
-	"douyincloud-gin-demo/component"
 	"douyincloud-gin-demo/service"
+
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	component.InitComponents()
 	r := gin.Default()
 
 	r.GET("/api/hello", service.Hello)
-	r.POST("/api/set_name", service.SetName)
+	r.POST("/api/apps/login", service.Login)
 
 	r.Run(":8000")
 }
