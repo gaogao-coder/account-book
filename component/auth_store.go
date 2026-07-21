@@ -143,9 +143,9 @@ ON DUPLICATE KEY UPDATE douyin_open_id = VALUES(douyin_open_id)`,
 	}
 
 	if _, err := tx.ExecContext(ctx, fmt.Sprintf(
-		`INSERT IGNORE INTO %s (user_id, nickname) VALUES (?, ?)`,
+		`INSERT IGNORE INTO %s (user_id, nickname, avatar_url) VALUES (?, ?, ?)`,
 		userProfilesTableName,
-	), userID, "抖音用户"); err != nil {
+	), userID, defaultUsername(userID), defaultAvatarURL); err != nil {
 		return err
 	}
 	_, err := tx.ExecContext(ctx, fmt.Sprintf(

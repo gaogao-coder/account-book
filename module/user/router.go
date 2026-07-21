@@ -16,6 +16,7 @@ limitations under the License.
 package user
 
 import (
+	"context"
 	"douyincloud-gin-demo/component"
 	"errors"
 	"log"
@@ -25,9 +26,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+var queryUserInfo queryUserInfoFunc = QueryUserInfo
+
 // RegisterRoutes 注册用户 Module 的 HTTP 路由。
 func RegisterRoutes(router gin.IRoutes) {
-	router.POST("/api/account/user", GetUserInfo)
+	router.POST("/api/account/get_user_info", GetUserInfo)
 }
 
 // GetUserInfo 返回当前 token 对应的用户基础信息。
@@ -40,7 +43,7 @@ func GetUserInfo(ctx *gin.Context) {
 		}
 	}
 	token := firstToken(req.Token, bearerToken(ctx.GetHeader("Authorization")))
-	info, err := QueryUserInfo(ctx.Request.Context(), token)
+	info, err := queryUserInfo(ctx.Request.Context(), token)
 	if err != nil {
 		writeUserInfoError(ctx, err)
 		return
@@ -99,3 +102,5 @@ func writeFailure(ctx *gin.Context, status int, message string, err error) {
 		Data:   nil,
 	})
 }
+
+type queryUserInfoFunc func(context.Context, string) (*component.UserInfo, error)
