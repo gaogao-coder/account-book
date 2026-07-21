@@ -13,21 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package user
 
-import (
-	userModule "douyincloud-gin-demo/module/user"
-	"douyincloud-gin-demo/service"
+type getUserInfoReq struct {
+	Token string `json:"token"`
+}
 
-	"github.com/gin-gonic/gin"
-)
-
-func main() {
-	r := gin.Default()
-
-	r.GET("/api/hello", service.Hello)
-	r.POST("/api/apps/login", service.Login)
-	userModule.RegisterRoutes(r)
-
-	r.Run(":8000")
+type userResp struct {
+	ErrNo  int         `json:"err_no"`
+	ErrMsg string      `json:"err_msg"`
+	Data   interface{} `json:"data"`
 }

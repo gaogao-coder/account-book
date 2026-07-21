@@ -18,6 +18,7 @@ package component
 import (
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -38,11 +39,21 @@ func SaveDouyinUser(ctx context.Context, openID string, unionID string, sessionK
 	if err := ensureAuthStore(ctx); err != nil {
 		return err
 	}
+	if err := ensureUserStore(ctx); err != nil {
+		return err
+	}
 	mysqlComponent, err := getMysqlDB()
 	if err != nil {
 		return err
 	}
-	_, err = mysqlComponent.db.ExecContext(
+
+	tx, err := mysqlComponent.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err = tx.ExecContext(
 		ctx,
 		fmt.Sprintf(
 			`INSERT INTO %s (open_id, union_id, session_key_hash, token_hash, token_expires_at)
@@ -55,8 +66,13 @@ ON DUPLICATE KEY UPDATE union_id = VALUES(union_id), session_key_hash = VALUES(s
 		hashSecret(sessionKey),
 		hashSecret(token),
 		time.Now().Add(tokenTTL),
-	)
-	return err
+	); err != nil {
+		return err
+	}
+	if err := initAccountingUser(ctx, tx, openID); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // ensureAuthStore 初始化抖音用户登录态表。
@@ -106,6 +122,37 @@ func migrateAuthStore(ctx context.Context, mysqlComponent *mysqlComponent) error
 		}
 	}
 	return nil
+}
+
+// initAccountingUser 初始化家庭记账用户模块所需的基础用户资料。
+func initAccountingUser(ctx context.Context, tx *sql.Tx, openID string) error {
+	if _, err := tx.ExecContext(ctx, fmt.Sprintf(
+		`INSERT INTO %s (douyin_open_id) VALUES (?)
+ON DUPLICATE KEY UPDATE douyin_open_id = VALUES(douyin_open_id)`,
+		usersTableName,
+	), openID); err != nil {
+		return err
+	}
+
+	var userID uint64
+	if err := tx.QueryRowContext(ctx, fmt.Sprintf(
+		`SELECT id FROM %s WHERE douyin_open_id = ? LIMIT 1`,
+		usersTableName,
+	), openID).Scan(&userID); err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, fmt.Sprintf(
+		`INSERT IGNORE INTO %s (user_id, nickname) VALUES (?, ?)`,
+		userProfilesTableName,
+	), userID, "抖音用户"); err != nil {
+		return err
+	}
+	_, err := tx.ExecContext(ctx, fmt.Sprintf(
+		`INSERT IGNORE INTO %s (user_id) VALUES (?)`,
+		userSettingsTableName,
+	), userID)
+	return err
 }
 
 func hashSecret(value string) string {

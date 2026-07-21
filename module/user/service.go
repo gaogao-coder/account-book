@@ -13,21 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package user
 
 import (
-	userModule "douyincloud-gin-demo/module/user"
-	"douyincloud-gin-demo/service"
-
-	"github.com/gin-gonic/gin"
+	"context"
+	"douyincloud-gin-demo/component"
+	"strings"
 )
 
-func main() {
-	r := gin.Default()
-
-	r.GET("/api/hello", service.Hello)
-	r.POST("/api/apps/login", service.Login)
-	userModule.RegisterRoutes(r)
-
-	r.Run(":8000")
+// QueryUserInfo 校验 token 并返回用户基础资料。
+func QueryUserInfo(ctx context.Context, token string) (*component.UserInfo, error) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return nil, component.ErrInvalidToken
+	}
+	return component.GetUserInfoByToken(ctx, token)
 }
