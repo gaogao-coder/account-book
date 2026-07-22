@@ -1,0 +1,111 @@
+internal/repository/user_store.go
+  s_c5e70731d645da::t_1438d4258d6a25 22
+  s_c5e70731d645da::t_f2ebadc7713da1 16-21,41-132,140,143,145,153-155,157,184,189,192,195,202,207,209,214
+internal/repository/auth_store.go
+  s_c5e70731d645da::t_55388cd3b7ab42 16
+Dockerfile
+  s_c5e70731d645da::t_4874948d286eec 7-8
+internal/handler/health_handler.go
+  s_c5e70731d645da::t_cda63b26f20671 1-24
+internal/config/config.go
+  s_c5e70731d645da::t_282a2247f49271 1-32
+scripts/docker/README.md
+  s_c5e70731d645da::t_bbd618e27146b6 1-3
+internal/handler/user_handler.go
+  s_c5e70731d645da::t_407869f143a856 16-84
+internal/domain/user.go
+  s_c5e70731d645da::t_7c7c32e7c027b8 1-20
+Makefile
+  s_c5e70731d645da::t_2555cc340c93f8 1-9,11
+  s_c5e70731d645da::t_01bcd951083be6 10
+cmd/api/main.go
+  s_c5e70731d645da::t_802877573c766a 19-30
+api/openapi.yaml
+  s_c5e70731d645da::t_9ce7418a0a1f95 1-35
+README.md
+  s_c5e70731d645da::t_07b36372c50482 47,50-81
+  s_c5e70731d645da::t_8249ef63b7c463 82-84
+  s_c5e70731d645da::t_82a1eb2a37c989 45-46
+  s_c5e70731d645da::t_3a8f5ae01197cc 127
+  s_c5e70731d645da::t_a99f0991e66ace 128
+  s_c5e70731d645da::t_3aa20e324f3fef 85-86
+internal/repository/user_store_test.go
+  s_c5e70731d645da::t_9a977141d907a8 16
+pkg/validator/validator.go
+  s_c5e70731d645da::t_c502f9939106c2 1-8
+internal/handler/router_test.go
+  s_c5e70731d645da::t_a37ce41cfedd87 1-34,39,41-43
+  s_c5e70731d645da::t_6915ea349daea4 35-37
+  s_c5e70731d645da::t_62d468ebaa55a5 38
+  s_c5e70731d645da::t_7ccbe62ce50f4b 40
+internal/service/login.go
+  s_c5e70731d645da::t_9d1c8012f14912 41
+  s_c5e70731d645da::t_cb863ef0724e86 26-40,73,76-78,80-81,95-132,141
+  s_c5e70731d645da::t_629298e76585c9 22-23,43-72,79,83-93,134,143
+scripts/migrate/001_init.sql
+  s_c5e70731d645da::t_77d15f98c9b803 1-38
+internal/handler/user_schema.go
+  s_c5e70731d645da::t_d20c000b48492e 16
+cmd/job/main.go
+  s_c5e70731d645da::t_ae527ebb47938d 1-4
+internal/service/health.go
+  s_c5e70731d645da::t_69d902e71b1b60 20-48
+  s_c5e70731d645da::t_a594ba1c9f6504 49
+  s_c5e70731d645da::t_9beb8009b53e80 17-19
+  s_c5e70731d645da::t_d74da5f57a0396 14-16
+internal/handler/login_handler.go
+  s_c5e70731d645da::t_b63db4257973c4 5,29,33-44
+  s_c5e70731d645da::t_cb31b533cb3bfa 1-4,6-28,30-32,45
+docs/API.md
+  s_c5e70731d645da::t_79339f8b73fe1d 3
+  s_c5e70731d645da::t_5a44636e1f35c1 4-6
+  s_c5e70731d645da::t_7e247eb1ba48e5 1-2
+  s_c5e70731d645da::t_4b4c6087d343e1 7-9
+internal/repository/mysql.go
+  s_c5e70731d645da::t_02876757710300 16
+test/README.md
+  s_c5e70731d645da::t_3b0aab456ed326 1-3
+web/README.md
+  s_c5e70731d645da::t_d6169b8f0de966 1-3
+internal/repository/types.go
+  s_c5e70731d645da::t_1a8d205dc76b61 16
+api/proto/README.md
+  s_c5e70731d645da::t_8bae462031c482 1-3
+pkg/logger/logger.go
+  s_c5e70731d645da::t_1b0d99f79feb7f 1-8
+internal/handler/router.go
+  s_c5e70731d645da::t_88d29df56969d5 1-20
+  s_c5e70731d645da::t_67442c25ee7fa8 21
+assets/README.md
+  s_c5e70731d645da::t_017b38db79ab64 1-3
+configs/app.yaml
+  s_c5e70731d645da::t_1f9b97c28b1a75 1-12
+internal/service/user.go
+  s_c5e70731d645da::t_39e4d2e7d56ba1 16-31
+internal/middleware/README.md
+  s_c5e70731d645da::t_c94728daf8f12a 1-3
+internal/handler/response.go
+  s_c5e70731d645da::t_335ce04855b2f4 1-124,127,130-132
+  s_c5e70731d645da::t_0dcddf95635ee4 125-126
+  s_c5e70731d645da::t_23bc25515bb071 128
+internal/handler/user_handler_test.go
+  s_c5e70731d645da::t_c56cb151d18dda 16-166
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9e567ec41dc89a8f3c6a1c58fa46454d0da8cbfa",
+  "prompts": {},
+  "sessions": {
+    "s_c5e70731d645da": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a5f37b26ee9bc330f78267a",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "gaoyun.gaogao <gaoyun.gaogao@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
