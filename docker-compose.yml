@@ -6,6 +6,6 @@ services:
     command: --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_ROOT_PASSWORD: example
-      MYSQL_DATABASE: demo
+      MYSQL_DATABASE: account-book
     ports:
       - "3306:3306"

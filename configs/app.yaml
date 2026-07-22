@@ -5,7 +5,7 @@ mysql:
   address: "127.0.0.1:3306"
   username: "root"
   password: "root"
-  database: "demo"
+  database: "account-book"
 
 douyin:
   app_id: ""
