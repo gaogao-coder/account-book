@@ -13,14 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package user
+package service
 
-type getUserInfoReq struct {
-	Token string `json:"token"`
-}
+import (
+	"context"
+	"douyincloud-gin-demo/internal/domain"
+	"douyincloud-gin-demo/internal/repository"
+	"strings"
+)
 
-type userResp struct {
-	ErrNo  int         `json:"err_no"`
-	ErrMsg string      `json:"err_msg"`
-	Data   interface{} `json:"data"`
+// QueryUserInfo 校验 token 并返回用户基础资料。
+func QueryUserInfo(ctx context.Context, token string) (*domain.UserInfo, error) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return nil, domain.ErrInvalidToken
+	}
+	return repository.GetUserInfoByToken(ctx, token)
 }

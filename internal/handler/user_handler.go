@@ -13,32 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package user
+package handler
 
 import (
 	"context"
-	"douyincloud-gin-demo/component"
+	"douyincloud-gin-demo/internal/domain"
+	"douyincloud-gin-demo/internal/service"
 	"errors"
-	"log"
-	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
-var queryUserInfo queryUserInfoFunc = QueryUserInfo
-
-// RegisterRoutes 注册用户 Module 的 HTTP 路由。
-func RegisterRoutes(router gin.IRoutes) {
-	router.POST("/api/account/get_user_info", GetUserInfo)
-}
+var queryUserInfo queryUserInfoFunc = service.QueryUserInfo
 
 // GetUserInfo 返回当前 token 对应的用户基础信息。
 func GetUserInfo(ctx *gin.Context) {
 	var req getUserInfoReq
 	if ctx.Request.Body != nil && ctx.Request.ContentLength != 0 {
 		if err := ctx.ShouldBindJSON(&req); err != nil {
-			writeFailure(ctx, http.StatusBadRequest, "invalid request body", nil)
+			Failure(ctx, InvalidArgument("请求体不是合法 JSON"))
 			return
 		}
 	}
@@ -73,34 +67,18 @@ func bearerToken(header string) string {
 // writeUserInfoError 将用户模块错误转换为 HTTP 响应。
 func writeUserInfoError(ctx *gin.Context, err error) {
 	switch {
-	case errors.Is(err, component.ErrInvalidToken):
-		writeFailure(ctx, http.StatusUnauthorized, "invalid token", nil)
-	case errors.Is(err, component.ErrUserNotFound):
-		writeFailure(ctx, http.StatusNotFound, "user not found", nil)
+	case errors.Is(err, domain.ErrInvalidToken):
+		Failure(ctx, Unauthorized("登录态无效或已过期"))
+	case errors.Is(err, domain.ErrUserNotFound):
+		Failure(ctx, NotFound("用户不存在"))
 	default:
-		writeFailure(ctx, http.StatusServiceUnavailable, "user store unavailable", err)
+		Failure(ctx, DependencyUnavailable("用户存储不可用", err))
 	}
 }
 
 // writeSuccess 写入用户模块成功响应。
 func writeSuccess(ctx *gin.Context, data interface{}) {
-	ctx.JSON(http.StatusOK, userResp{
-		ErrNo:  0,
-		ErrMsg: "success",
-		Data:   data,
-	})
+	Success(ctx, data)
 }
 
-// writeFailure 写入用户模块失败响应。
-func writeFailure(ctx *gin.Context, status int, message string, err error) {
-	if err != nil && status >= http.StatusInternalServerError {
-		log.Printf("user request failed: %v", err)
-	}
-	ctx.JSON(status, userResp{
-		ErrNo:  -1,
-		ErrMsg: message,
-		Data:   nil,
-	})
-}
-
-type queryUserInfoFunc func(context.Context, string) (*component.UserInfo, error)
+type queryUserInfoFunc func(context.Context, string) (*domain.UserInfo, error)

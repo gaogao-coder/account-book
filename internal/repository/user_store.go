@@ -13,11 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package component
+package repository
 
 import (
 	"context"
 	"database/sql"
+	"douyincloud-gin-demo/internal/domain"
 	"errors"
 	"fmt"
 	"strconv"
@@ -28,31 +29,16 @@ const (
 	usersTableName        = "users"
 	userProfilesTableName = "user_profiles"
 	userSettingsTableName = "user_settings"
-	defaultAvatarURL      = "https://lf3-static.bytednsdoc.com/obj/eden-cn/default-avatar.png"
+	defaultAvatarURL      = "https://tt35b94304aab3ccd201-env-jyqimo1dsz.tos-cn-beijing.volces.com/4f5c5effb214491c8e4753aadeb3b4b7~tplv-nvscq0fgd4-jpg.jpeg"
 )
 
 var (
-	ErrInvalidToken = errors.New("invalid token")
-	ErrUserNotFound = errors.New("user not found")
-
 	userStoreMu    sync.Mutex
 	userStoreReady bool
 )
 
-// UserInfo 表示用户模块对外返回的基础用户资料。
-type UserInfo struct {
-	UserID             uint64 `json:"user_id"`
-	Phone              string `json:"phone"`
-	DouyinOpenID       string `json:"douyin_open_id"`
-	Username           string `json:"username"`
-	AvatarURL          string `json:"avatar_url"`
-	Gender             string `json:"gender"`
-	Birthday           string `json:"birthday"`
-	CurrentHouseholdID uint64 `json:"current_household_id"`
-}
-
 // GetUserInfoByToken 校验服务端 token，并在首次登录时初始化用户基础资料。
-func GetUserInfoByToken(ctx context.Context, token string) (*UserInfo, error) {
+func GetUserInfoByToken(ctx context.Context, token string) (*domain.UserInfo, error) {
 	if err := ensureAuthStore(ctx); err != nil {
 		return nil, err
 	}
@@ -76,7 +62,7 @@ func GetUserInfoByToken(ctx context.Context, token string) (*UserInfo, error) {
 		douyinUserTableName,
 	), hashSecret(token)).Scan(&openID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrInvalidToken
+		return nil, domain.ErrInvalidToken
 	}
 	if err != nil {
 		return nil, err
@@ -92,7 +78,7 @@ func GetUserInfoByToken(ctx context.Context, token string) (*UserInfo, error) {
 }
 
 // queryUserInfoByOpenID 按抖音 open_id 查询用户基础资料。
-func queryUserInfoByOpenID(ctx context.Context, mysqlComponent *mysqlComponent, openID string) (*UserInfo, error) {
+func queryUserInfoByOpenID(ctx context.Context, mysqlComponent *mysqlComponent, openID string) (*domain.UserInfo, error) {
 	var row userInfoRow
 	err := mysqlComponent.db.QueryRowContext(ctx, fmt.Sprintf(
 		`SELECT u.id, u.phone, u.douyin_open_id,
@@ -118,13 +104,13 @@ LIMIT 1`,
 		&row.CurrentHouseholdID,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrUserNotFound
+		return nil, domain.ErrUserNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
 	if !row.UserID.Valid {
-		return nil, ErrUserNotFound
+		return nil, domain.ErrUserNotFound
 	}
 
 	return row.toUserInfo(), nil
@@ -142,8 +128,8 @@ type userInfoRow struct {
 }
 
 // toUserInfo 将数据库可空字段转换为接口响应结构。
-func (r userInfoRow) toUserInfo() *UserInfo {
-	info := &UserInfo{
+func (r userInfoRow) toUserInfo() *domain.UserInfo {
+	info := &domain.UserInfo{
 		UserID:       uint64(r.UserID.Int64),
 		Phone:        r.Phone.String,
 		DouyinOpenID: r.DouyinOpenID.String,
@@ -187,7 +173,8 @@ avatar_url VARCHAR(512) NOT NULL DEFAULT '',
 gender VARCHAR(16) NULL,
 birthday DATE NULL,
 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+UNIQUE KEY nickname_unique (nickname)
 )`, userProfilesTableName),
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
 user_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
@@ -213,6 +200,7 @@ func migrateUserStore(ctx context.Context, mysqlComponent *mysqlComponent) error
 	statements := []string{
 		fmt.Sprintf("ALTER TABLE %s MODIFY COLUMN nickname VARCHAR(32) NOT NULL DEFAULT ''", userProfilesTableName),
 		fmt.Sprintf("ALTER TABLE %s ADD COLUMN avatar_url VARCHAR(512) NOT NULL DEFAULT ''", userProfilesTableName),
+		fmt.Sprintf("ALTER TABLE %s ADD UNIQUE KEY nickname_unique (nickname)", userProfilesTableName),
 	}
 	for _, statement := range statements {
 		if _, err := mysqlComponent.db.ExecContext(ctx, statement); err != nil && !isIgnorableAlterError(err) {

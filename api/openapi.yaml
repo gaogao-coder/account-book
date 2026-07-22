@@ -1,0 +1,47 @@
+openapi: 3.0.3
+info:
+  title: douyincloud-gin-demo API
+  version: 1.0.0
+paths:
+  /api/health/mysql:
+    get:
+      summary: MySQL 健康检查
+      responses:
+        "200":
+          description: MySQL 可用
+        "503":
+          description: MySQL 不可用
+  /api/auth/douyin/login:
+    post:
+      summary: 抖音小程序登录
+      responses:
+        "200":
+          description: 登录成功
+        "400":
+          description: 请求参数错误
+        "502":
+          description: 抖音上游不可用
+        "503":
+          description: 登录存储不可用
+  /api/auth/token/refresh:
+    post:
+      summary: 刷新服务端登录凭证
+      responses:
+        "200":
+          description: 刷新成功
+        "400":
+          description: 请求参数错误
+        "401":
+          description: 登录态无效或已过期
+        "503":
+          description: 登录存储不可用
+  /api/account/user_info:
+    post:
+      summary: 查询当前用户信息
+      responses:
+        "200":
+          description: 查询成功
+        "401":
+          description: 登录态无效或已过期
+        "404":
+          description: 用户不存在

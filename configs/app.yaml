@@ -1,0 +1,12 @@
+server:
+  port: 8000
+
+mysql:
+  address: "127.0.0.1:3306"
+  username: "root"
+  password: "root"
+  database: "demo"
+
+douyin:
+  app_id: ""
+  app_secret: ""

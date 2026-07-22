@@ -16,18 +16,16 @@ limitations under the License.
 package main
 
 import (
-	userModule "douyincloud-gin-demo/module/user"
-	"douyincloud-gin-demo/service"
-
-	"github.com/gin-gonic/gin"
+	"douyincloud-gin-demo/internal/config"
+	"douyincloud-gin-demo/internal/handler"
+	"log"
 )
 
+// main 初始化配置和 HTTP 路由，并启动 API 服务。
 func main() {
-	r := gin.Default()
-
-	r.GET("/api/hello", service.Hello)
-	r.POST("/api/apps/login", service.Login)
-	userModule.RegisterRoutes(r)
-
-	r.Run(":8000")
+	cfg := config.Load()
+	router := handler.NewRouter()
+	if err := router.Run(cfg.Addr()); err != nil {
+		log.Fatalf("run api server: %v", err)
+	}
 }
