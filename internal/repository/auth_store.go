@@ -42,7 +42,7 @@ var (
 	authStoreReady bool
 )
 
-// SaveDouyinUser 创建抖音小程序用户的开发者服务端登录态。
+// SaveDouyinUser 创建或刷新抖音小程序用户的开发者服务端登录态。
 func SaveDouyinUser(ctx context.Context, openID string, unionID string, sessionKey string, token string) error {
 	if err := ensureAuthStore(ctx); err != nil {
 		return err
@@ -61,24 +61,50 @@ func SaveDouyinUser(ctx context.Context, openID string, unionID string, sessionK
 	}
 	defer tx.Rollback()
 
-	if _, err = tx.ExecContext(
-		ctx,
-		fmt.Sprintf(
-			`INSERT INTO %s (open_id, union_id, session_key_hash, token_hash, token_expires_at)
-VALUES (?, ?, ?, ?, ?)`,
-			douyinUserTableName,
-		),
-		openID,
-		unionID,
-		hashSecret(sessionKey),
-		hashSecret(token),
-		time.Now().Add(tokenTTL),
-	); err != nil {
-		if isDuplicateOpenIDError(err) {
-			return ErrDouyinOpenIDExists
-		}
+	sessionKeyHash := hashSecret(sessionKey)
+	tokenHash := hashSecret(token)
+	expiresAt := time.Now().Add(tokenTTL)
+	result, err := tx.ExecContext(ctx, fmt.Sprintf(
+		`UPDATE %s
+SET union_id = ?, session_key_hash = ?, token_hash = ?, token_expires_at = ?
+WHERE open_id = ?`,
+		douyinUserTableName,
+	), unionID, sessionKeyHash, tokenHash, expiresAt, openID)
+	if err != nil {
 		return err
 	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		if _, err = tx.ExecContext(
+			ctx,
+			fmt.Sprintf(
+				`INSERT INTO %s (open_id, union_id, session_key_hash, token_hash, token_expires_at)
+VALUES (?, ?, ?, ?, ?)`,
+				douyinUserTableName,
+			),
+			openID,
+			unionID,
+			sessionKeyHash,
+			tokenHash,
+			expiresAt,
+		); err != nil {
+			if !isDuplicateOpenIDError(err) {
+				return err
+			}
+			if _, err = tx.ExecContext(ctx, fmt.Sprintf(
+				`UPDATE %s
+SET union_id = ?, session_key_hash = ?, token_hash = ?, token_expires_at = ?
+WHERE open_id = ?`,
+				douyinUserTableName,
+			), unionID, sessionKeyHash, tokenHash, expiresAt, openID); err != nil {
+				return err
+			}
+		}
+	}
+
 	if err := initAccountingUser(ctx, tx, openID); err != nil {
 		if isDuplicateOpenIDError(err) {
 			return ErrDouyinOpenIDExists
@@ -86,30 +112,6 @@ VALUES (?, ?, ?, ?, ?)`,
 		return err
 	}
 	return tx.Commit()
-}
-
-// GetDouyinUserByOpenID 查询系统中是否已存在相同抖音 OpenID 的用户。
-func GetDouyinUserByOpenID(ctx context.Context, openID string) (bool, error) {
-	if err := ensureAuthStore(ctx); err != nil {
-		return false, err
-	}
-	if err := ensureUserStore(ctx); err != nil {
-		return false, err
-	}
-	mysqlComponent, err := getMysqlDB()
-	if err != nil {
-		return false, err
-	}
-
-	var exists bool
-	if err := mysqlComponent.db.QueryRowContext(ctx, fmt.Sprintf(
-		`SELECT EXISTS(SELECT 1 FROM %s WHERE open_id = ?) OR EXISTS(SELECT 1 FROM %s WHERE douyin_open_id = ?)`,
-		douyinUserTableName,
-		usersTableName,
-	), openID, openID).Scan(&exists); err != nil {
-		return false, err
-	}
-	return exists, nil
 }
 
 // RefreshDouyinUserToken 校验旧 token 并替换为新的服务端登录凭证。

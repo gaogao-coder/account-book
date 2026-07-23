@@ -35,8 +35,7 @@ const defaultCode2SessionURL = "https://developer.toutiao.com/api/apps/v2/jscode
 
 var (
 	ErrLoginConfigMissing = errors.New("login config missing")
-	ErrLoginUserCheck     = errors.New("login user check failed")
-	ErrLoginOpenIDExists  = errors.New("login openid already exists")
+	ErrLoginRejected      = errors.New("login credential rejected")
 	ErrLoginStorage       = errors.New("login storage unavailable")
 	ErrLoginToken         = errors.New("login token generation failed")
 	ErrLoginUpstream      = errors.New("login upstream failed")
@@ -81,23 +80,11 @@ func Login(ctx context.Context, code string) (*LoginResp, error) {
 		return nil, err
 	}
 
-	// 创建新用户前检查 OpenID 是否已存在，避免重复创建同一抖音用户。
-	userExists, err := repository.GetDouyinUserByOpenID(ctx, session.Data.OpenID)
-	if err != nil {
-		return nil, fmt.Errorf("%w: check user existence failed: %v", ErrLoginUserCheck, err)
-	}
-	if userExists {
-		return nil, fmt.Errorf("%w: user with openid %s already exists", ErrLoginOpenIDExists, session.Data.OpenID)
-	}
-
 	token, err := newToken()
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrLoginToken, err)
 	}
 	if err := repository.SaveDouyinUser(ctx, session.Data.OpenID, session.Data.UnionID, session.Data.SessionKey, token); err != nil {
-		if errors.Is(err, repository.ErrDouyinOpenIDExists) {
-			return nil, fmt.Errorf("%w: user with openid %s already exists", ErrLoginOpenIDExists, session.Data.OpenID)
-		}
 		return nil, fmt.Errorf("%w: %v", ErrLoginStorage, err)
 	}
 
@@ -166,7 +153,7 @@ func code2Session(ctx context.Context, code string) (*code2SessionResp, error) {
 		return nil, fmt.Errorf("%w: code2session http status %d", ErrLoginUpstream, httpResp.StatusCode)
 	}
 	if resp.ErrNo != 0 {
-		return nil, fmt.Errorf("%w: code2session failed: %s", ErrLoginUpstream, resp.ErrTips)
+		return nil, fmt.Errorf("%w: code2session failed: %s", ErrLoginRejected, resp.ErrTips)
 	}
 	if resp.Data.OpenID == "" || resp.Data.SessionKey == "" {
 		return nil, fmt.Errorf("%w: code2session response missing openid or session_key", ErrLoginUpstream)

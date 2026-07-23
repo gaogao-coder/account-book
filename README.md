@@ -26,7 +26,7 @@
 - 登录接口固定请求抖音官方接口，不支持通过环境变量切换 mock 地址
 - 登录态表 `douyin_users` 会在首次登录时自动创建或迁移
 - 登录成功后会同步初始化 `users`、`user_profiles`、`user_settings` 基础用户数据
-- 创建新用户前会校验 OpenID 唯一性，OpenID 已存在时返回 HTTP `409 Conflict`
+- OpenID 已存在时会刷新登录态并复用已有用户资料，允许用户重新登录
 - `POST /api/auth/token/refresh` 可使用当前未过期 token 换取新的服务端 token
 
 ### 用户信息接口
@@ -41,7 +41,7 @@
 
 - 默认用户名按用户自增 ID 生成，格式为 `用户<base36_id>`，避免系统内重名
 - 默认头像 URL 为 `https://tt35b94304aab3ccd201-env-jyqimo1dsz.tos-cn-beijing.volces.com/4f5c5effb214491c8e4753aadeb3b4b7~tplv-nvscq0fgd4-jpg.jpeg`
-- 重复创建同一 OpenID 用户时会被拒绝，不会重新生成用户名和头像
+- 同一 OpenID 重新登录时不会重新生成用户名和头像
 
 ## 项目目录结构
 
@@ -202,9 +202,9 @@ curl -X POST "http://127.0.0.1:8000/api/auth/douyin/login" \
 常见失败：
 
 - 请求体缺少 `code` 或 JSON 格式错误：HTTP `400`
-- OpenID 已存在，不能重复创建用户：HTTP `409`
+- `code` 无效或已过期：HTTP `400`
 - 未配置 `DOUYIN_APP_ID` / `DOUYIN_APP_SECRET`：HTTP `503`
-- 抖音开放平台不可用或返回错误：HTTP `502`
+- 抖音开放平台不可用或返回非 200：HTTP `502`
 - MySQL 登录态写入失败：HTTP `503`
 
 ### `POST /api/auth/token/refresh`
